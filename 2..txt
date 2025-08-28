@@ -1,0 +1,975 @@
+@{
+    ViewBag.Title = "Invoice";
+}
+<style>
+    .title {
+        color: #000 !important;
+        text-align: center;
+        background: #6DB7EE;
+    }
+
+    .table, .table td, .table th {
+        text-align: center;
+        border: 2px solid #000 !important;
+    }
+
+    th {
+        color: blue !important;
+        font-weight: bold !important;
+        text-align: center;
+    }
+
+    #tblInvoice tr, #tblInvoice_frozen tr {
+        height: 30px;
+    }
+
+    tr {
+        opacity: 1 !important;
+    }
+
+    .sub-title {
+        width: 95px;
+    }
+</style>
+<h3>
+    QUẢN LÝ INVOICE
+</h3>
+<label for="search_cells">
+    Search Invoice:
+</label>
+<input id="search_cells" type="search">
+<label for="txtPartFilter" style="padding-left: 50px;">
+    Partno:
+</label>
+<input id="txtPartFilter" type="search">
+
+<div style="margin-bottom: 20px">
+</div>
+<div class="form-group form-group-sm">
+    <button type="submit" class="btn btn-success btn-sm" id="btnAddInvoice">
+        TẠO MỚI
+    </button>
+    <button type="submit" class="btn btn-success btn-sm" id="btnUpdateInvoice">
+        SỬA
+    </button>
+    <button type="submit" class="btn btn-danger btn-sm" id="btnDeleteInvoice">
+        XÓA
+    </button>
+    <button type="submit" class="btn btn-warning btn-sm" id="btnExportInvoice">
+        XUẤT RA EXCEL
+    </button>
+</div>
+<div style="clear: both">
+</div>
+<table id="tblInvoice">
+</table>
+<div class="col-sm-12" id="jqAbnormalPager">
+    <div style="clear: both">
+    </div>
+</div>
+<div style="clear: both; margin-bottom: 50px"></div>
+<table id="tblSuggestion"></table>
+<button type="submit" class="btn btn-warning btn-sm" id="btnExportSuggestion">XUẤT RA EXCEL</button>
+<div id="dlgForm">
+</div>
+<script>
+    $(document).ready(function() {
+        //When the window size changes resize the gird
+        $('#tblInvoice').jqGrid({
+            pager: "#jqAbnormalPager",
+            shrinkToFit: false,
+            autowidth: true,
+            caption: 'Bảng quản lý hóa đơn',
+            url: '@Url.Action("ListInvoice")',
+            datatype: "json",
+            colModel: [
+                {
+                    name: 'act', index: 'act', width: 130, label: 'Action',
+                },
+                {
+                    name: 'CreateBy',
+                    label: 'PIC',
+                    align: 'center',
+                    width: '60',
+                },
+                {
+                    name: 'Type',
+                    label: 'Type',
+                    width: '100',
+                    formatter: 'select',
+                    editable: true,
+                    edittype: 'select',
+                    editoptions: { value: { 0: 'Tái xuất', 1: 'Tái nhập',2:'B13 cho A31',3:'Tạm nhập',4:'Tạm xuất',5:'B13 cho E11,E15',6:'A31 cho E42',8:'B13 cho A12',7:'Other' } }
+                },
+                {
+                    name: 'InvoiceId',
+                    width: '150',
+                    key: true,
+                    hidden: true
+                },
+                {
+                    name: 'InvoiceNumber',
+                    label: 'Invoice Number',
+                    width: '150',
+                    editable: true,
+                    editrules: {
+                        required: true
+                    },
+                },
+                {
+                    name: 'DateRegister',
+                    label: 'DateRegister',
+                    formatter: "date",
+                    width: '100',
+                    formatoptions: { srcformat: "ISO8601Long", newformat: "m/d/Y" }
+                },
+                {
+                    name: 'Customer',
+                    label: 'Customers',
+                    editable: true,
+                    hidden: true,
+                    edittype: 'select',
+                    align: 'center',
+                    editrules: { required: true },
+                    editoptions: {
+                        aysnc: true,
+                        dataUrl: '@Url.Action("GetCustomer")',
+                        buildSelect: function(data) {
+                            var s = '<select>';
+                            if (data.length > 0) {
+                                for (var i = 0, l = data.length; i < l; i++) {
+                                    var ri = data[i];
+                                    s += '<option value="' + ri.CustomerId + '">' + ri.Customer1 +"|"+ri.Address + '</option>';
+                                }
+                            }
+                            return s + "</select>";
+                        },
+                    }
+                },
+                {
+                    name: 'CustomerName',
+                    label: 'Customers',
+                    editable: false,
+                    align: 'center',
+                },
+                {
+                    name: 'ATT',
+                    label: 'ATT',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'Trade',
+                    label: 'Trade term',
+                    width: '100',
+                    editable: true,
+                },
+
+                {
+                    name: 'Freight',
+                    label: 'Freight',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'Forwarder',
+                    label: 'Forwarder',
+                    width: '100',
+                    editable: true,
+                },
+
+                {
+                    name: 'Destination',
+                    label: 'Destination',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'PoNo',
+                    label: 'PO NO',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'GW',
+                    label: 'GW',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'NW',
+                    label: 'NW',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'Package',
+                    label: 'Packages',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'Purpose',
+                    label: 'Purpose',
+                    width: '100',
+                    editable: true,
+                },
+                {
+                    name: 'Currency',
+                    label: 'Currency',
+                    width: '100',
+                    editable: true,
+                },
+
+                  {
+                    name: 'FromDate',
+                    label: 'FromDate',
+                    formatter: "date",
+                    width: '100',
+                    formatoptions: { srcformat: "ISO8601Long", newformat: "m/d/Y" }
+                },
+                {
+                    name: 'Active',
+                    hidden: true,
+                },
+            ],
+
+
+
+
+            //loadonce: true, //don't callback again controller
+
+
+            viewrecords: true,
+            rownumbers: true, // show row numbers
+            height: "auto",
+            rowNum: 10,
+            altRows: true,
+            //gridComplete: initGrid,
+            //  ondblClickRow: editAbnormal,
+            rowList: [10, 25, 50, 100, 250, 500, 'All'],
+            jsonReader: {
+                root: "rows",
+                page: "page",
+                total: "total",
+                records: "records",
+                repeatitems: false,
+                userdata: "userdata",
+                // instruct subgrid to get the data as name:value pair
+                subgrid: { repeatitems: false }
+            },
+
+            //Bắt đầu sự kiện bấm process
+            gridComplete: function() {
+                var ids = $('#tblInvoice').getDataIDs();
+                for (var i = 0; i < ids.length; i++) {
+                    var cl = ids[i];
+                    var row = $("#tblInvoice").jqGrid('getRowData', cl);
+                    if (row.Active != "true") {
+                        var pr = "";
+                        if (row.Type == "0" || row.Type == "1" || row.Type == "2" || row.Type == "5" || row.Type == "6" ||  row.Type == "8") {
+                            pr = "<input style='height:20px;width:60px;' type='button' value='Process' onclick=\"ProcessInvoice('" + cl + "');\"  />";
+                        }
+                        var im = "<input style='height:20px;width:60px;' type='button' value='Import' onclick=\"ImportInvoiceDetail('" + cl + "');\"  />";
+                        $('#tblInvoice').jqGrid('setRowData', ids[i], { act: pr + im });
+                    } else {
+                        viewBtn = "<input style='height:20px;width:60px;' type='button' value='Xem lại' onclick=\"ViewInvoice('" + cl + "');\"  />";
+                         $('#tblInvoice').jqGrid('setRowData', ids[i], { act: viewBtn });
+                    }
+                }
+            },
+
+
+            //loadComplete: function(data) {
+            //    if (data.Result == "ERROR")
+            //        alert(data.Message);
+            //    $(".ui-pg-selbox option[value='All']").val(data.records);
+            //},
+
+            loadComplete: function (data) {
+                if (data.Result == "ERROR")
+                    alert(data.Message);
+                else if (data.Result == "PARTIAL") {
+                    // Có lỗi nhưng vẫn có dữ liệu
+                    alert(data.Message); // Hiển thị popup lỗi
+                    // Dữ liệu vẫn được hiển thị ở bảng dưới từ data.rows
+                }
+                if (data.Result == "OK" || data.Result == "PARTIAL") {
+                    $(".ui-pg-selbox option[value='All']").val(data.rows.length);
+                    var myGrid = $('#tblSuggestion');
+                    if (data.Type == 1) {
+                        myGrid.jqGrid('hideCol', myGrid.getGridParam("colModel")[7].name);
+                        myGrid.jqGrid('hideCol', myGrid.getGridParam("colModel")[8].name);
+                    } else {
+                        myGrid.jqGrid('showCol', myGrid.getGridParam("colModel")[7].name);
+                        myGrid.jqGrid('showCol', myGrid.getGridParam("colModel")[8].name);
+                    }
+                }
+            },
+
+
+            reloadAfterSubmit: true,
+            afterSubmit: function() {
+                $(this).jqGrid("setGridParam", { datatype: 'json' });
+                return [true];
+            },
+            //onSelectRow: editNpiEvent,
+            ajaxSelectOptions: { type: "POST", dataType: "json" },
+            subGrid: true, // set the subGrid property to true to show expand buttons for each row
+            subGridOptions: {
+                "plusicon": "ui-icon-triangle-1-e",
+                "minusicon": "ui-icon-triangle-1-s",
+                "openicon": "ui-icon-arrowreturn-1-e"
+            },
+            subGridRowExpanded: function(pParentRowId, pParentRowKey) {
+                //parentRowId = jqGrid_1
+                var childGridId = pParentRowId + "_table";
+                var childGridPagerId = pParentRowId + "_pager";
+                $(document.getElementById(pParentRowId)).append('<table id=' + childGridId + '></table><div id=' + childGridPagerId + ' class=scroll></div>');
+                $(document.getElementById(childGridId)).jqGrid({
+                    url: '@Url.Action("ListInvoiceDetail")',
+                    mtype: "POST",
+                    datatype: "json",
+                    postData: {
+                        invoiceId: function() {
+                            var invoiceId = pParentRowKey;
+                            return invoiceId;
+                        },
+                    },
+                    colModel: [
+                        { name: 'act', index: 'act', width: 100, label: 'Action' },
+                        {
+                            name: 'InvoiceDetailId',
+                            label: 'InvoiceDetailId',
+                            key: true,
+                            editable: true,
+                            hidden: true,
+                            editoptions: { readonly: "readonly" }
+                        },
+                        {
+                            name: 'PartId',
+                            label: 'PartId',
+                            align: 'center',
+                            editable: true,
+                            editrules: {
+                                required: true
+                            },
+                            editoptions: {
+                                dataInit: function(elem) {
+                                    $(elem).autocomplete({
+                                        source: '@Url.Action("GetListProduct")?invoiceId=' + pParentRowKey,
+                                        select: function(event, ui) {
+                                            $('#ac_fin_g').val(ui.item.value);
+                                        }
+                                    });
+                                },
+                                dataEvents: [
+                                    {
+                                        type: 'change',
+                                        fn: function(e) {
+                                            var $countryElem = $(e.target);
+                                            var $row = $countryElem.closest('tr.jqgrow');
+                                            var partNo = $("#" + $row.attr('id') + "_PartId").val();
+                                            $.ajax({
+                                                type: 'post',
+                                                url: '@Url.Action("GetProductOptionsJq")',
+                                                data: {
+                                                    partNo: partNo
+                                                },
+                                                success: function(data) {
+                                                    if (data.Result == "OK") {
+                                                    debugger
+                                                        $("#" + $row.attr('id') + "_PartNo").val(data.Record.PartNo);
+                                                    }
+                                                },
+                                                error: function() {
+                                                    bootbox.alert("Warning: There're some problems when connecting to server. Please Log out and Log in again.");
+                                                }
+                                            });
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                         {
+                            name: 'PartProductName',
+                            label: 'Part Name',
+                            align: 'center',
+                            editable: true,
+                        },
+                        {
+                            name: 'Quantity',
+                            label: 'Quantity',
+                            align: 'center',
+                            editable: true,
+                            formatter: 'integer',
+                            editrules: {
+                                number: true,
+                                required: true
+                            },
+                        },
+                        {
+                            name: 'Unit',
+                            label: 'DVT',
+                            align: 'center',
+                            editable: true,
+                            editrules: {
+                                required: true
+                            },
+                        },
+                        {
+                            name: 'Price',
+                            label: 'Giá',
+                            align: 'center',
+                            editable: true,
+                        },
+                        {
+                            name: 'Origin',
+                            label: 'Xuất xứ',
+                            align: 'center',
+                            editable: true,
+                        },
+                        {
+                            name: 'OutCountry',
+                            label: 'Đầu vào',
+                            align: 'center',
+                            editable: true,
+//                            editrules: {
+//                                required: true
+//                            },
+                            editoptions: {
+                                dataInit: function(elem) {
+                                    $(elem).autocomplete({
+                                        source: '@Url.Action("GetListSupplier")',
+                                        select: function(event, ui) {
+                                            $('#ac_fin_g').val(ui.item.value);
+                                        }
+                                    });
+                                },
+                                dataEvents: [
+                                    {
+                                        type: 'change',
+                                        fn: function(e) {
+                                            var $countryElem = $(e.target);
+                                            var $row = $countryElem.closest('tr.jqgrow');
+                                            var supplier = $("#" + $row.attr('id') + "OutCountry").val();
+                                            $.ajax({
+                                                type: 'post',
+                                                url: '@Url.Action("GetSupplierOptionsJq")',
+                                                data: {
+                                                    sup: supplier
+                                                },
+                                                success: function(data) {
+                                                    if (data.Result == "OK") {
+                                                        $("#" + $row.attr('id') + "OutCountry").val(data.Record.PartNo);
+                                                    }
+                                                },
+                                                error: function() {
+                                                    bootbox.alert("Warning: There're some problems when connecting to server. Please Log out and Log in again.");
+                                                }
+                                            });
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            name: 'InvoiceTemporary',
+                            label: 'Số hóa đơn đầu vào',
+                            align: 'center',
+                            editable: true,
+                            editrules: {
+                                required: true
+                            },
+                        },
+                        {
+                            name: 'PartDetailId',
+                            label: 'Mục hàng',
+                            align: 'center',
+                            editable: true,
+                        },
+                    ],
+                    shrinkToFit: true,
+                    width: '1300',
+                    height: '100%',
+                    pager: childGridPagerId,
+                    rownumbers: true, // show row numbers
+                    rownumWidth: 26, // the width of the row numbers columns,
+                    altRows: true, //Hien thi hang cua bang mau dam, mau nhat
+                    rowNum: 10,
+                    rowList: [10, 25, 50, 100, 250, 500, 'All'],
+                    jsonReader: {
+                        root: "rows",
+                        page: "page",
+                        total: "total",
+                        records: "records",
+                        repeatitems: false,
+                        userdata: "userdata",
+                        subgrid: { repeatitems: false }
+                    },
+                    gridComplete: function() {
+                        var ids = $('#' + childGridId).getDataIDs();
+                        for (var i = 0; i < ids.length; i++) {
+                            var cl = ids[i];
+                            var rm = "<input style='height:20px;width:60px;' type='button' value='Remove' onclick=\"RemoveInvoiceDetail('" + cl + "');\"  />";
+                            $(document.getElementById(childGridId)).jqGrid('setRowData', ids[i], { act: rm });
+                        }
+                    },
+                });
+                $(document.getElementById(childGridId)).jqGrid('navGrid', "#" + childGridPagerId, { edit: true, add: true, del: false, search: false },
+                    {
+// edit option
+                        width: 500, recreateForm: true,
+                        beforeShowForm: function(form) {
+                            $('#PartId').attr("readonly", "readonly");
+                              $("#tr_AddInfo").remove();
+                               var nameColumnField = $('#tr_InvoiceTemporary', form).show();
+                             $('<tr class="FormData" id="tr_AddInfo"><td style="color:blue"class="CaptionTD ui-widget-content">VLDG/THANHKHOAN<br>Số hóa đơn</td></tr>').insertAfter (nameColumnField);
+                        },
+                        url: '@Url.Action("EditInvoiceDetail")',
+                        closeAfterEdit: true,
+                          afterSubmit: function(response, postdata) {
+                        //checkData
+                        var result = eval('('+ response.responseText +')');
+                        if(result.Result=="ERROR"){
+                                $('#FormError>td','#TblGrid_'+childGridId).text(result.Message);         $('#FormError>td>ul','#TblGrid_'+childGridId).css({'list-style-type': 'disc', 'list-style-position': 'outside'});
+                                $('#FormError','#TblGrid_'+childGridId).show();
+                                return [false, result.Message];
+                        }
+                        else
+                                   return [true];
+                        }//end of afterSubmit's if-then-else
+                    },
+                    {
+// add option
+                        width: 500, recreateForm: true,
+                        beforeShowForm: function(form) {
+                            $('#PartId').removeAttr("readonly");
+                                    $("#tr_AddInfo").remove();
+                               var nameColumnField = $('#tr_InvoiceTemporary', form).show();
+                             $('<tr class="FormData" id="tr_AddInfo"><td style="color:blue"class="CaptionTD ui-widget-content">VLDG/THANHKHOAN<br>Số hóa đơn</td></tr>').insertAfter (nameColumnField);
+                        },
+                        url: '@Url.Action("AddInvoiceDetail")?invoiceId=' + pParentRowKey,
+                        closeAfterAdd: true,
+                          afterSubmit: function(response, postdata) {
+                        //checkData
+                        var result = eval('('+ response.responseText +')');
+                        if(result.Result=="ERROR"){
+                                $('#FormError>td','#TblGrid_'+childGridId).text(result.Message);         $('#FormError>td>ul','#TblGrid_'+childGridId).css({'list-style-type': 'disc', 'list-style-position': 'outside'});
+                                $('#FormError','#TblGrid_'+childGridId).show();
+                                return [false, result.Message];
+                        }
+                        else
+                                   return [true];
+                        }//end of afterSubmit's if-then-else
+                    },
+                    { multipleSearch: true },
+                    { recreateForm: false }
+                );
+            },
+        });
+
+        var topPagerDiv = $("#tblInvoice_toppager")[0];
+
+        $("#tblInvoice_toppager_center", topPagerDiv).remove();
+        $("#tblInvoice_toppager_right", topPagerDiv).remove();
+
+        // We need to have a navigation bar in order to add custom buttons to it
+        jQuery("#tblInvoice").jqGrid('navGrid', '#jqAbnormalPager',
+            { edit: false, add: false, del: false, refresh: true, search: false },
+            { recreateForm: true }
+        );
+    });
+    $("#search_cells").on("keyup", function() {
+        var url = '@Url.Action("ListInvoice")?invoiceNumber=' + $(this).val();
+        $("#tblInvoice").jqGrid('setGridParam', { url: url });
+        $("#tblInvoice").trigger("reloadGrid");
+        $("#txtPartFilter").val("");
+    });
+
+    $("#txtPartFilter").on("keyup", function() {
+        var url = '@Url.Action("ListInvoice")?partno=' + $(this).val();
+        $("#tblInvoice").jqGrid('setGridParam', { url: url });
+        $("#tblInvoice").trigger("reloadGrid");
+        $("#search_cells").val("");
+    });
+
+    function deleteInvoice(action) {
+        //alert("Delete Follower");
+        return {
+            url: '@Url.Action("DeleteInvoice")',
+            closeAfterAdd: true,
+            closeAfterEdit: true,
+            afterShowForm: function(formId) {},
+            modal: true,
+            delData: {
+                InvoiceId: function() {
+                    var sel_id = $("#tblInvoice").jqGrid('getGridParam', 'selrow');
+                    return sel_id;
+                }
+            },
+            width: 620,
+            height: 'auto',
+            afterSubmit: function(response, postdata) {
+                var data = $.parseJSON(response.responseText);
+                if (data.Result == "OK") {
+                    $(this).jqGrid('setGridParam', { datatype: 'json' }).trigger('reloadGrid'); //Reloads the grid after Add
+                    return [true, ''];
+                } else if (data.Result == "ERROR") {
+                    return [false, data.Message];
+                } else {
+                    return [false, data];
+                }
+            }
+
+        };
+    }
+
+    function RemoveInvoiceDetail(rowKey) {
+        bootbox.confirm("Are you sure?", function(result) {
+            if (result) {
+                if (rowKey) {
+                    $.ajax({
+                        type: 'post',
+                        url: '@Url.Action("DeleteInvoiceDetail")',
+                        data: { InvoiceDetailId: rowKey },
+                        success: function(data) {
+                            if (data.Result == 'OK') {
+                                var id = data.InvoiceId;
+                                var tableId = "#tblInvoice_" + id + "_table";
+                                $(tableId).jqGrid('setGridParam', { datatype: 'json' }).trigger('reloadGrid'); //Reloads the grid after Add
+                                bootbox.alert("Remove Sucessfully");
+                            } else if (data.Result == 'ERROR') {
+                                bootbox.alert(data.Message);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    function ProcessInvoice(rowKey) {
+        bootbox.confirm("Are you sure?", function(result) {
+            if (result) {
+                if (rowKey) {
+                    //List Suggestion
+                    $("#tblSuggestion").jqGrid('setGridParam', { postData: { InvoiceId: rowKey,type:0 } }).trigger("reloadGrid");
+                } else if (data.Result == 'ERROR') {
+                    bootbox.alert(data.Message);
+                    $("#tblSuggestion").jqGrid('setGridParam', { postData: { InvoiceId: 0,type:0 } }).trigger("reloadGrid");
+                }
+            }
+        });
+    }
+
+    function ViewInvoice(rowKey) {
+        if (rowKey) {
+            //List Suggestion
+            $("#tblSuggestion").jqGrid('setGridParam', { postData: { InvoiceId: rowKey,type:1 } }).trigger("reloadGrid");
+        } else if (data.Result == 'ERROR') {
+            bootbox.alert(data.Message);
+            $("#tblSuggestion").jqGrid('setGridParam', { postData: { InvoiceId: 0,type:1 } }).trigger("reloadGrid");
+        }
+    }
+
+      function ImportInvoiceDetail(rowKey) {
+        bootbox.confirm("Are you sure?", function(result) {
+            if (result) {
+                if (rowKey) {
+                    $.ajax({
+                        type: 'get',
+                        url: '@Url.Action("ImportInvoiceDetail")',
+                        data: { invoiceId: rowKey },
+                        success: function(data) {
+                            $("#dlgForm").html(data);
+                            // Login button click handler
+                            bootbox.dialog({
+                                title: 'Kiểm tra với tờ khai hải quan',
+                                message: $('#frmAtt'),
+                                show: false // We will show it manually later
+                            }).on('shown.bs.modal', function() {
+                                $('#frmAtt')
+                                    .show() // Show the login form
+                                    .bootstrapValidator('resetForm', true); // Reset form
+                                if (modalShown) { // Nếu dialog đã được bật lên trước đó trong vòng 2s thì tắt hết cả 2 dialog.
+                                    $('.modal.in').modal('hide');
+                                }
+                                modalShown = true; // dialog đã được bật lên
+                                $(".bootbox").draggable({
+                                    handle: ".modal-header"
+                                });
+                                setTimeout(function() { modalShown = false; }, 2500); // chuyển trạng thái dialog về chưa đc bật sau 2s bấm nút mở dialog.
+                            }).on('hide.bs.modal', function(e) {
+                            }).modal('show').find("div.modal-dialog");
+                        },
+                        error: function() {
+                            bootbox.alert('Error');
+                        }
+                    });
+                }
+            }
+        });
+    }
+</script>
+
+@*  Bắt đầu hiển thị bảng khi bấm process  *@
+<script>
+    $(document).ready(function() {
+        //When the window size changes resize the gird
+        $('#tblSuggestion').jqGrid({
+            shrinkToFit: false,
+            autowidth: true,
+            caption: 'Thông tin trừ lùi',
+            url: '@Url.Action("Calculate")',
+            postData: { InvoiceId: 0,type:0 },
+            datatype: "json",
+            colModel: [
+              {
+                    name: 'Supplier',
+                    label: 'Nhà cung cấp/KH',
+                    width: '100',
+                },
+                {
+                    name: 'xSheetNumber',
+                    label: 'Số tờ khai tạm',
+                    width: '100',
+                },
+                {
+                    name: 'xSheetDate',
+                    label: 'Ngày tờ khai',
+                    width: '100',
+                    formatter: "date",
+                    formatoptions: { srcformat: "ISO8601Long", newformat: "Y/m/d" }
+                },
+                {
+                    name: 'InvoiceNumber',
+                    label: 'Số hóa đơn tái',
+                    align: 'center',
+                },
+                {
+                    name: 'PartId',
+                    label: 'Mã hàng',
+                    align: 'center',
+                },
+                {
+                    name: 'Quantity',
+                    label: 'Số lượng',
+                    align: 'center'
+                },
+               {
+                    name: 'RemainTK',
+                    label: 'Tờ khai còn lại',
+                    align: 'center'
+                },
+                {
+                    name: 'RemainInvoice',
+                    label: 'Hóa đơn còn lại',
+                    align: 'center',
+                    formatter: function(cellValue, options, rowObject) {
+                        if (rowObject.RemainInvoice > 0) {
+                            return "<p style='background:red; padding-top: 5px; color: #FFF!important;height:100%;text-align:center'>"+rowObject.RemainInvoice+"<span> Không nhập được</span></p>";
+                        } else return rowObject.RemainInvoice;
+                    },
+                },
+                {
+                    name: 'PartDetailId',
+                    label: 'Mục hàng',
+                    align: 'center'
+                },
+                {
+                    name: 'xSheetNumberEx',
+                    label: 'Tờ khai tái xuất',
+                    align: 'center'
+                },
+
+
+
+            ],
+            //loadonce: true, //don't callback again controller
+            sortname: 'DateRegister',
+            sortorder: 'desc',
+            viewrecords: true,
+            rownumbers: true, // show row numbers
+            height: "auto",
+            rowNum: 500,
+            altRows: true,
+            //gridComplete: initGrid,
+            //  ondblClickRow: editAbnormal,
+            rowList: [10, 25, 50, 100, 250, 500, 'All'],
+            jsonReader: {
+                root: "rows",
+                page: "page",
+                total: "total",
+                records: "records",
+                repeatitems: false,
+                userdata: "userdata",
+                // instruct subgrid to get the data as name:value pair
+                subgrid: { repeatitems: false }
+            },
+            gridComplete: function() {
+                var ids = $('#tblSuggestion').getDataIDs();
+                for (var i = 0; i < ids.length; i++) {
+                    var cl = ids[i];
+                    var pr = "<input style='height:20px;width:60px;' type='button' value='Process' onclick=\"ProcessInvoice('" + cl + "');\"  />";
+                    $('#tblSuggestion').jqGrid('setRowData', ids[i], { act: pr });
+                    var row = $("#tblSuggestion").jqGrid('getRowData', cl);
+                    if (row.xSheetNumberEx == "Chưa có tờ khai") {
+                          $("#" + cl).css("background", "red");
+                    }
+                }
+            },
+            loadComplete: function(data) {
+                if (data.Result == "ERROR")
+                    alert(data.Message);
+                     if (data.Result == "OK") {
+                            $(".ui-pg-selbox option[value='All']").val(data.rows.length);
+                                var myGrid = $('#tblSuggestion');
+                              if (data.Type == 1) {
+                                  myGrid.jqGrid('hideCol', myGrid.getGridParam("colModel")[7].name);
+                                  myGrid.jqGrid('hideCol', myGrid.getGridParam("colModel")[8].name);
+                              } else {
+                                  myGrid.jqGrid('showCol', myGrid.getGridParam("colModel")[7].name);
+                                  myGrid.jqGrid('showCol', myGrid.getGridParam("colModel")[8].name);
+                              }
+                     }
+            },
+            reloadAfterSubmit: true,
+            afterSubmit: function() {
+                $(this).jqGrid("setGridParam", { datatype: 'json' });
+                return [true];
+            },
+            //onSelectRow: editNpiEvent,
+            ajaxSelectOptions: { type: "POST", dataType: "json" },
+        });
+
+        $(window).bind('resize', function() {
+            $("#tblInvoice").setGridWidth($(window).width() /1.05);
+            $("#tblSuggestion").setGridWidth($(window).width() /1.05);
+        }).trigger('resize');
+    });
+</script>
+@*Kết thức hiển thị bảng khi bấm process*@
+
+
+<script>
+    var modalShown = false;
+    $("#btnAddInvoice").click(function () {
+        $.ajax({
+            type: 'get',
+            url: '@Url.Action("CreateInvoice")',
+            success: function (data) {
+                alert('create invoice');
+                debugger
+                $("#dlgForm").html(data);
+                // Login button click handler
+                bootbox.dialog({
+                    title: 'Hóa đơn',
+                    message: $('#frmUpdate'),
+                    show: false // We will show it manually later
+                }).on('shown.bs.modal', function () {
+                    $('#frmUpdate')
+                        .show() // Show the login form
+                        .bootstrapValidator('resetForm', true); // Reset form
+                    if (modalShown) { // Nếu dialog đã được bật lên trước đó trong vòng 2s thì tắt hết cả 2 dialog.
+                        $('.modal.in').modal('hide');
+                    }
+                    modalShown = true; // dialog đã được bật lên
+                    $(".bootbox").draggable({
+                        handle: ".modal-header"
+                    });
+                    setTimeout(function () { modalShown = false; }, 2500); // chuyển trạng thái dialog về chưa đc bật sau 2s bấm nút mở dialog.
+                }).on('hide.bs.modal', function (e) {
+                }).modal('show').find("div.modal-dialog").addClass("class-with-width");
+            }
+        });
+    })
+
+    $("#btnUpdateInvoice").click(function () {
+        var rowKey = $("#tblInvoice").jqGrid('getGridParam', "selrow");
+        if (rowKey != null) {
+            $.ajax({
+                type: 'get',
+                url: '@Url.Action("CreateInvoice")',
+                data: { InvoiceId: rowKey },
+                success: function (data) {
+                    $("#dlgForm").html(data);
+                    // Login button click handler
+                    bootbox.dialog({
+                        title: 'Hóa đơn',
+                        message: $('#frmUpdate'),
+                        show: false // We will show it manually later
+                    }).on('shown.bs.modal', function () {
+                        $('#frmUpdate')
+                            .show() // Show the login form
+                            .bootstrapValidator('resetForm', true); // Reset form
+                        if (modalShown) { // Nếu dialog đã được bật lên trước đó trong vòng 2s thì tắt hết cả 2 dialog.
+                            $('.modal.in').modal('hide');
+                        }
+                        modalShown = true; // dialog đã được bật lên
+                        $(".bootbox").draggable({
+                            handle: ".modal-header"
+                        });
+                        setTimeout(function () { modalShown = false; }, 2500); // chuyển trạng thái dialog về chưa đc bật sau 2s bấm nút mở dialog.
+                    }).on('hide.bs.modal', function (e) {
+                    }).modal('show').find("div.modal-dialog").addClass("class-with-width");
+                }
+            });
+        } else {
+            bootbox.alert("Mời bạn chọn invoice muốn thay đổi");
+        }
+    })
+    $("#btnDeleteInvoice").click(function () {
+        bootbox.confirm("Are you sure?", function (result) {
+            if (result) {
+                var rowKey = $("#tblInvoice").jqGrid('getGridParam', "selrow");
+                if (rowKey != null) {
+                    $.ajax({
+                        type: 'post',
+                        url: '@Url.Action("DeleteInvoice")',
+                        data: { InvoiceId: rowKey },
+                        success: function (data) {
+                            if (data.Result == "OK") {
+                                $("#tblInvoice").trigger("reloadGrid");
+                            } else {
+                                bootbox.alert(data.Message);
+                            }
+                        }
+                    });
+                } else {
+                    bootbox.alert("Mời bạn chọn invoice muốn xóa");
+                }
+            }
+        });
+    })
+    $("#btnExportInvoice").click(function () {
+        bootbox.confirm("Do you want to export?", function (result) {
+            if (result) {
+                var rowKey = $("#tblInvoice").jqGrid('getGridParam', "selrow");
+                if (rowKey != null) {
+                    $.ajax({
+                        type: 'get',
+                        success: function (data) {
+                            window.location = '@Url.Action("ExportInvoice")?InvoiceId=' + rowKey;
+                        }
+                    });
+                } else {
+                    bootbox.alert("Mời bạn chọn invoice muốn export");
+                }
+            }
+        });
+    })
+
+    $("#btnExportSuggestion").click(function () {
+        bootbox.confirm("Do you want to export?", function (result) {
+            if (result) {
+                $.ajax({
+                    type: 'get',
+                    success: function (data) {
+                        window.location = '@Url.Action("ExportSuggestion")';
+                    }
+                });
+            }
+        });
+    })
+</script>
